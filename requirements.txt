@@ -1,0 +1,6 @@
+fake_useragent==0.1.11
+fastapi==0.85.0
+redis==4.3.4
+selenium==4.5.0
+starlette==0.20.4
+undetected_chromedriver==3.1.5.post4
