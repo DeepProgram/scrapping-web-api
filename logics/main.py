@@ -24,7 +24,7 @@ def create_Driver():
     options.add_argument("--disable-site-isolation-trials")
     options.add_argument("--window-size=1920,1080")
 
-    driver = uc.Chrome(executable_path="D:\Python-Development\Projects\Free-Up-Scrapper\chromedriver.exe",
+    driver = uc.Chrome(executable_path="/home/system/scrapping-web-api/logics/chromedriver",
                        options=options)
     return driver
 
@@ -34,7 +34,7 @@ def load_individual_job_page(driver, job_page_element):
     time.sleep(2)
     ActionChains(driver).move_to_element(driver.find_element(By.CSS_SELECTOR, "li[class='why-upwork-dropdown "
                                                                               "nav-dropdown my-5 my-lg-0']")).perform()
-    time.sleep(1)
+    time.sleep(2)
     job_page_element.click()
     time.sleep(2)
     data_dict["title"] = get_job_title(driver)
@@ -128,13 +128,14 @@ def load_multiple_page(redis_db, str_uuid, search_key, page_count):
 
 
 def load_job_search_page(page_no, driver: undetected_chromedriver.Chrome, redis_db, str_uuid, search_key):
+    redis_db.rpush(str_uuid, "selenium_started")
     driver.get(f"https://www.upwork.com/nx/jobs/search/?q={urllib.parse.quote(search_key)}&sort=recency&page={page_no}")
-    time.sleep(1)
+    time.sleep(10)
     elements = driver.find_elements(By.CSS_SELECTOR,
                                     "section[class='up-card-section up-card-list-section up-card-hover']")
     if page_no == 1:
         redis_db.rpush(str_uuid, "page_loaded")
-
+    driver.get_screenshot_as_file(f"p{page_no}.png")
     for index, element in enumerate(elements):
         job_data = load_individual_job_page(driver, element)
         redis_db.rpush(str_uuid, json.dumps(job_data))
@@ -146,6 +147,5 @@ def load_job_search_page(page_no, driver: undetected_chromedriver.Chrome, redis_
 
 def start_automation(redis_db, str_uuid, search_key, page_count):
     redis_db.rpush(str_uuid, "automation_started")
-    redis_db.rpush(str_uuid, "selenium_started")
     load_multiple_page(redis_db, str_uuid, search_key, page_count)
 
