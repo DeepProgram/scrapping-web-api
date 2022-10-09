@@ -22,7 +22,7 @@ def create_Driver():
     options.add_argument("disable-default-apps")
     options.add_argument('disable-component-extensions-with-background-pages')
     options.add_argument("--disable-site-isolation-trials")
-    options.add_argument("--window-size=1920,1080")
+    # options.add_argument("--window-size=1920,1080")
 
     driver = uc.Chrome(executable_path="/home/system/scrapping-web-api/logics/chromedriver",
                        options=options)
@@ -129,8 +129,8 @@ def load_multiple_page(redis_db, str_uuid, search_key, page_count):
 
 def load_job_search_page(page_no, driver: undetected_chromedriver.Chrome, redis_db, str_uuid, search_key):
     redis_db.rpush(str_uuid, "selenium_started")
-    driver.get(f"https://www.upwork.com/nx/jobs/search/?q={urllib.parse.quote(search_key)}&sort=recency&page={page_no}")
-    time.sleep(10)
+    driver.get(f"https://www.upwork.com/search/jobs/?q={urllib.parse.quote(search_key)}")
+    time.sleep(2)
     elements = driver.find_elements(By.CSS_SELECTOR,
                                     "section[class='up-card-section up-card-list-section up-card-hover']")
     if page_no == 1:
