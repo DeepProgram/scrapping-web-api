@@ -129,7 +129,7 @@ def load_initial_page(driver, redis_db, search_key, str_uuid):
     time.sleep(2)
 
 
-def process_full_page(driver, redis_db, str_uuid, page_no):
+def process_full_page(driver, redis_db, str_uuid):
     elements = driver.find_elements(By.CSS_SELECTOR,
                                     "section[class='up-card-section up-card-list-section up-card-hover']")
     for index, element in enumerate(elements):
@@ -138,7 +138,7 @@ def process_full_page(driver, redis_db, str_uuid, page_no):
         button_element = driver.find_element(By.CSS_SELECTOR, "button[class='up-btn up-btn-link up-slider-prev-btn "
                                                               "d-block']")
         button_element.click()
-    redis_db.rpush(str_uuid, str(page_no))  # This Will Be Page Number In Future
+    
 
 
 def load_multiple_page(redis_db, str_uuid, search_key, page_count):
@@ -148,14 +148,19 @@ def load_multiple_page(redis_db, str_uuid, search_key, page_count):
     for page_no in range(1, page_count + 1):
         if page_no == 1:
             load_initial_page(driver, redis_db, search_key, str_uuid)
-        process_full_page(driver, redis_db, str_uuid, page_no)
+        process_full_page(driver, redis_db, str_uuid)
+        redis_db.rpush(str_uuid, str(page_no))  # Added Page No In Redis Database
         if page_no < page_count:
-            next_page_element = driver.find_element(By.CSS_SELECTOR,
+            try:
+                next_page_element = driver.find_element(By.CSS_SELECTOR,
                                                     "button[class='up-pagination-item up-btn up-btn-link']")
-            next_page_element.click()
+                next_page_element.click()
+            except Exception as e:
+                print(e)
             time.sleep(1)
     driver.close()
     driver.quit()
+    redis_db.rpush(str_uuid, "end")
 
 
 def start_automation(redis_db, str_uuid, search_key, page_count):
