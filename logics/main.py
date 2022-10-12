@@ -22,9 +22,9 @@ def create_Driver():
     options.add_argument("disable-default-apps")
     options.add_argument('disable-component-extensions-with-background-pages')
     options.add_argument("--disable-site-isolation-trials")
-    # options.add_argument("--window-size=1920,1080")
+    options.add_argument("--window-size=1920,1080")
 
-    driver = uc.Chrome(executable_path="/home/system/scrapping-web-api/logics/chromedriver",
+    driver = uc.Chrome(executable_path="C:\\Users\\sudo\\Desktop\\scrapping-web-api-devs\\logics\\chromedriver.exe",
                        options=options)
     return driver
 
@@ -36,7 +36,7 @@ def load_individual_job_page(driver, job_page_element):
                                                                               "nav-dropdown my-5 my-lg-0']")).perform()
     time.sleep(2)
     job_page_element.click()
-    time.sleep(2)
+    time.sleep(4)
     data_dict["title"] = get_job_title(driver)
     data_dict["url"] = get_job_url(driver)
     data_dict["details"] = get_job_details(driver)
@@ -80,6 +80,8 @@ def get_job_details(driver):
 
 def process_job_applicable_location_time(content):
     job_applicable_location_and_post_time = re.split(r"Posted |Renewed ", content.text)[1].split("\n")
+    if len(job_applicable_location_and_post_time) != 2:
+        return ["N/A", "N/A"]
     job_applicable_location = job_applicable_location_and_post_time[1]
     job_posted_time = job_applicable_location_and_post_time[0]
     return [job_applicable_location, job_posted_time]
@@ -106,6 +108,8 @@ def process_job_skills(content):
     job_skills_required_dict = {}
     for skills in content.find_elements(By.XPATH, "div/div/div"):
         skills_list = skills.text.split("\n")
+        if len(skills_list) == 0:
+            continue
         job_skills_required_dict[skills_list[0]] = \
             skills_list[1:] if "more" not in skills_list[-1] else skills_list[1:-1]
     return job_skills_required_dict
@@ -115,27 +119,19 @@ def process_job_activity(content):
     job_activity_dict = {}
     for values in content.find_elements(By.XPATH, "div/ul/li"):
         each_activity = values.text.split("\n")
-        job_activity_dict[each_activity[1]] = each_activity[0]
+        if len(each_activity) == 2:
+            job_activity_dict[each_activity[1]] = each_activity[0]
     return job_activity_dict
 
-
-def load_multiple_page(redis_db, str_uuid, search_key, page_count):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        for page_no in range(1, page_count + 1):
-            executor.submit(lambda p: load_job_search_page(*p),
-                            [page_no, create_Driver(), redis_db, str_uuid, search_key])
-    redis_db.rpush(str_uuid, "end")
-
-
-def load_job_search_page(page_no, driver: undetected_chromedriver.Chrome, redis_db, str_uuid, search_key):
-    redis_db.rpush(str_uuid, "selenium_started")
-    driver.get(f"https://www.upwork.com/search/jobs/?q={urllib.parse.quote(search_key)}")
+def load_initial_page(driver, redis_db, search_key, str_uuid):
+    driver.get(f"https://www.upwork.com/nx/jobs/search/?q={urllib.parse.quote(search_key)}&sort=recency")
+    redis_db.rpush(str_uuid, "page_loaded")
     time.sleep(2)
+
+
+def process_full_page(driver, redis_db, str_uuid, page_no):
     elements = driver.find_elements(By.CSS_SELECTOR,
                                     "section[class='up-card-section up-card-list-section up-card-hover']")
-    if page_no == 1:
-        redis_db.rpush(str_uuid, "page_loaded")
-    driver.get_screenshot_as_file(f"p{page_no}.png")
     for index, element in enumerate(elements):
         job_data = load_individual_job_page(driver, element)
         redis_db.rpush(str_uuid, json.dumps(job_data))
@@ -143,6 +139,23 @@ def load_job_search_page(page_no, driver: undetected_chromedriver.Chrome, redis_
                                                               "d-block']")
         button_element.click()
     redis_db.rpush(str_uuid, str(page_no))  # This Will Be Page Number In Future
+
+
+def load_multiple_page(redis_db, str_uuid, search_key, page_count):
+    driver = create_Driver()
+    redis_db.rpush(str_uuid, "selenium_started")
+
+    for page_no in range(1, page_count + 1):
+        if page_no == 1:
+            load_initial_page(driver, redis_db, search_key, str_uuid)
+        process_full_page(driver, redis_db, str_uuid, page_no)
+        if page_no < page_count:
+            next_page_element = driver.find_element(By.CSS_SELECTOR,
+                                                    "button[class='up-pagination-item up-btn up-btn-link']")
+            next_page_element.click()
+            time.sleep(1)
+    driver.close()
+    driver.quit()
 
 
 def start_automation(redis_db, str_uuid, search_key, page_count):
