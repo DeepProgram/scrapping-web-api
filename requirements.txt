@@ -1,6 +1,9 @@
 fake_useragent==0.1.11
-fastapi==0.85.0
-redis==4.3.4
-selenium==4.5.0
+fastapi==0.86.0
+jose==1.0.0
+passlib==1.7.4
+pydantic==1.10.2
+selenium==4.6.0
+SQLAlchemy==1.4.42
 starlette==0.20.4
 undetected_chromedriver==3.1.5.post4
