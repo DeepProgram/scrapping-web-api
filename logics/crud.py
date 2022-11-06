@@ -39,7 +39,7 @@ def add_user_in_db(db: Session, signup_info: SignupInfo):
         db.add(user_table_row)
         db.commit()
         return [user_id, signup_info.first_name]
-    return []
+    return [None, None]
 
 
 def if_email_exist_in_db(db: Session, email: str):
