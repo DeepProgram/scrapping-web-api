@@ -79,5 +79,7 @@ def get_upwork_data_by_id_and_query(db: Session, user_id: str, search_query: str
 
 
 def get_first_name_from_user_id(db: Session, user_id: str):
-    first_name = db.query(User.first_name).filter(User.user_id == user_id).first()
-    return first_name
+    query_result = db.query(User.first_name).filter(User.user_id == user_id).first()
+    if query_result is not None:
+        return query_result[0]
+    return query_result
