@@ -76,3 +76,8 @@ def get_upwork_data_by_id_and_query(db: Session, user_id: str, search_query: str
     for search_result, in search_result_list_unprocessed:
         search_result_list.append(json.loads(search_result))
     return search_result_list
+
+
+def get_first_name_from_user_id(db: Session, user_id: str):
+    first_name = db.query(User.first_name).filter(User.user_id == user_id).first()
+    return first_name

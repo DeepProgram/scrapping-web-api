@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 from db.db_sql import SessionLocal
-from logics.crud import if_email_exist_in_db, get_password_from_email
+from logics.crud import if_email_exist_in_db, get_password_from_email, get_first_name_from_user_id
 from schemas import LoginInfo
 from datetime import timedelta
 from logics.json_web_token import create_jwt_access_token, oauth2_bearer, SECRET_KEY, ALGORITHM
@@ -50,3 +51,29 @@ async def login(login_info: LoginInfo, db: Session = Depends(get_db)):
         },
         status_code=200
     )
+
+
+@router.get("/token")
+async def validate_user_from_token(token: str = Depends(oauth2_bearer), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload["id"]
+        first_name = get_first_name_from_user_id(db, user_id)
+        if first_name:
+            return JSONResponse(
+                content={
+                    "status_message": "user_validated",
+                    "first_name": first_name
+                },
+                status_code=200
+            )
+        else:
+            return JSONResponse(
+                content={"status_message": "user_not_validated"},
+                status_code=200
+            )
+    except JWTError:
+        return HTTPException(
+            status_code=200,
+            detail={"Token Is Not Valid"}
+        )
